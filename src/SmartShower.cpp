@@ -9,7 +9,7 @@
 #include<Wire.h>
 #endif
 
-U8G2_SH1106_128X64_NONAME_1_HW_I2C u8g2(U8G2_R0, /* clock=*/ 22, /* data=*/ 21, /* reset=*/ U8X8_PIN_NONE);
+U8G2_SH1106_128X64_NONAME_1_HW_I2C u8g2(U8G2_R0,22, 21,  U8X8_PIN_NONE);
 
 const int oneWireBus = 4;
 OneWire oneWire(oneWireBus);
@@ -73,7 +73,7 @@ struct Temp {
   Temp T;
   int SetTemp = 27;
 
-  void buzzer(int delayTime, int led, int intervalo) {
+void buzzer(int delayTime, int led, int intervalo) {
     if (sound == false){
     for (int lap = 0; intervalo >= lap; lap++){
         ledcWrite(led, 50 );
@@ -140,14 +140,14 @@ void loop() {
   }
 
   if (T.ActualTemp < SetTemp && Mode != 0 && Estanque.full == false){
-    digitalWrite(SolShow, LOW);
-    digitalWrite(SolTank, HIGH);
+    digitalWrite(SolShow, HIGH);
+    digitalWrite(SolTank, LOW);
     Status = estado.Esperando;
     rep = 0;
   }
   if (T.ActualTemp >= SetTemp && Mode != 0 && Estanque.full == false){
-    digitalWrite(SolShow, HIGH);
-    digitalWrite(SolTank, LOW);
+    digitalWrite(SolShow, LOW);
+    digitalWrite(SolTank, HIGH);
     Status = estado.Activo;
     Serial.println(rep);
     sound =false;
@@ -156,13 +156,13 @@ void loop() {
       rep = rep +1;
     }
   }
-  if( Mode >= 2 && button.Act == HIGH){
+  if( Mode >= 2 && button.Act == LOW){
     Mode = 0;
     delay (500);
   }
   if (Estanque.lvl == LOW){
     digitalWrite(SolShow, LOW);
-    digitalWrite(SolTank, LOW);
+    digitalWrite(SolTank, HIGH);
     Estanque.full = true;
     Capacidad = Nivel.LLeno;
     sound =false;
@@ -178,17 +178,16 @@ void loop() {
       buzzer(1000,  ledChannel, 3);
       alar = alar +1;
     }
-    // buzzer(1000,  ledChannel, 6);
   }
   if (T.ActualTemp < SetTemp && Mode != 0 && Estanque.full == true){
     digitalWrite(SolShow, LOW);
-    digitalWrite(SolTank, LOW);
+    digitalWrite(SolTank, HIGH);
     Status = estado.Esperando;
     rep = 0;
   }
   if (T.ActualTemp >= SetTemp && Mode != 0 && Estanque.full == true){
     digitalWrite(SolShow, LOW);
-    digitalWrite(SolTank, LOW);
+    digitalWrite(SolTank, HIGH);
     Status = estado.Activo;
     sound =false;
     if (rep == 0){
