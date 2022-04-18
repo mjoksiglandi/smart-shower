@@ -78,11 +78,9 @@ struct Temp {
   Temp T;
   int SetTemp;
 
-// Change this!!
 const char* ssid = WIFI_SSID;
 const char* password = WIFI_PASS;
 
-// prototypes
 bool connectWifi();
 
 void buzzer(int delayTime, int led, int intervalo) {
@@ -92,7 +90,7 @@ void buzzer(int delayTime, int led, int intervalo) {
         delay(delayTime);
         ledcWrite(led, 0);
         delay(delayTime);
-        Serial.println(lap);
+        // Serial.println(lap);
         if (lap >= intervalo){
           sound = true;
       }
@@ -119,9 +117,9 @@ void DuchaChanged(EspalexaDevice* d) {
 //  uint8_t percent = d->getPercent();
   uint8_t degrees = d->getDegrees(); //for heaters, HVAC, ...
 
-  Serial.print("B changed to ");
-  Serial.print(degrees);
-  Serial.println("°C");
+  // Serial.print("B changed to ");
+  // Serial.print(degrees);
+  // Serial.println("°C");
   SetTemp = degrees;
 }
 
@@ -129,15 +127,8 @@ void setup(){
   Serial.begin(115200);
   sensors.begin();
   u8g2.begin();
-  // Initialise wifi connection
   wifiConnected = connectWifi();
-  // if(!wifiConnected){
-  //   while (1) {
-  //     Serial.println("Cannot connect to WiFi. Please check data and reset the ESP.");
-  //     delay(2500);
-  //   }
-  // }
-  espalexa.addDevice("ducha", DuchaChanged, EspalexaDeviceType::dimmable, 127); //Dimmable device, optional 4th parameter is beginning state (here fully on)
+  espalexa.addDevice("ducha", DuchaChanged, EspalexaDeviceType::dimmable, 127);
   espalexa.begin();
 
   ledcSetup(ledChannel, freq, resolution);
@@ -169,8 +160,8 @@ void loop(){
 
  u8g2.firstPage();
 
- Serial.println(rep);
- Serial.println(SetTemp);
+ // Serial.println(rep);
+ // Serial.println(SetTemp);
 
  if (SetTemp != 0){
    Mode = 1;
@@ -198,7 +189,7 @@ void loop(){
    digitalWrite(SolShow, LOW);
    digitalWrite(SolTank, HIGH);
    Status = estado.Activo;
-   Serial.println(rep);
+   // Serial.println(rep);
    sound =false;
    if (rep == 0){
      buzzer(500,  ledChannel, 1);
@@ -206,7 +197,6 @@ void loop(){
    }
  }
  if( Mode >= 2 && button.Act == LOW || SetTemp == 0){
-  // LastTemp = SetTemp;
    Mode = 0;
    SetTemp= 0;
    delay (500);
@@ -256,7 +246,7 @@ void loop(){
      SetTemp = 25;
    }
    SetTemp = SetTemp + 1;
-   Serial.println(SetTemp);
+   // Serial.println(SetTemp);
    delay(250);
    }
  if (button.Down == LOW){
@@ -264,7 +254,7 @@ void loop(){
      SetTemp = 0;
    }
    SetTemp = SetTemp - 1;
-   Serial.println(SetTemp);
+   // Serial.println(SetTemp);
    delay(250);
    }
  do {
@@ -304,11 +294,11 @@ bool connectWifi(){
 
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
-  Serial.println("");
-  Serial.println("Connecting to WiFi");
+  // Serial.println("");
+  // Serial.println("Connecting to WiFi");
 
   // Wait for connection
-  Serial.print("Connecting...");
+  // Serial.print("Connecting...");
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
@@ -317,15 +307,15 @@ bool connectWifi(){
     }
     i++;
   }
-  Serial.println("");
+  // Serial.println("");
   if (state){
-    Serial.print("Connected to ");
-    Serial.println(ssid);
-    Serial.print("IP address: ");
-    Serial.println(WiFi.localIP());
+    // Serial.print("Connected to ");
+    // Serial.println(ssid);
+    // Serial.print("IP address: ");
+    // Serial.println(WiFi.localIP());
   }
   else {
-    Serial.println("Connection failed.");
+    // Serial.println("Connection failed.");
   }
   return state;
 }
