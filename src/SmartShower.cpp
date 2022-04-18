@@ -1,19 +1,8 @@
-/*
- * An example that demonstrates most capabilities of Espalexa v2.4.0
- */
-// #ifdef ARDUINO_ARCH_ESP32
-
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include<U8g2lib.h>
 #include <WiFi.h>
-// #else
-// #include <ESP8266WiFi.h>
-// #endif
-//#define ESPALEXA_ASYNC            //uncomment for async operation (can fix empty body issue)
-//#define ESPALEXA_NO_SUBPAGE       //disable /espalexa status page
-//#define ESPALEXA_DEBUG            //activate debug serial logging
-//#define ESPALEXA_MAXDEVICES 15    //set maximum devices add-able to Espalexa
+
 #include <Espalexa.h>
 #include <credentials.h>
 
@@ -90,8 +79,8 @@ struct Temp {
   int SetTemp;
 
 // Change this!!
-const char* ssid = WIFI_SSID/*"..."*/;
-const char* password = WIFI_PASS /*"wifipassword"*/;
+const char* ssid = WIFI_SSID;
+const char* password = WIFI_PASS;
 
 // prototypes
 bool connectWifi();
@@ -142,12 +131,12 @@ void setup(){
   u8g2.begin();
   // Initialise wifi connection
   wifiConnected = connectWifi();
-  if(!wifiConnected){
-    while (1) {
-      Serial.println("Cannot connect to WiFi. Please check data and reset the ESP.");
-      delay(2500);
-    }
-  }
+  // if(!wifiConnected){
+  //   while (1) {
+  //     Serial.println("Cannot connect to WiFi. Please check data and reset the ESP.");
+  //     delay(2500);
+  //   }
+  // }
   espalexa.addDevice("ducha", DuchaChanged, EspalexaDeviceType::dimmable, 127); //Dimmable device, optional 4th parameter is beginning state (here fully on)
   espalexa.begin();
 
@@ -185,7 +174,6 @@ void loop(){
 
  if (SetTemp != 0){
    Mode = 1;
-   //SetTemp = LastTemp;
  }
 
  if (Mode == 0){
@@ -264,11 +252,17 @@ void loop(){
    }
  }
  if (button.Up == LOW){
+   if(SetTemp == 0){
+     SetTemp = 25;
+   }
    SetTemp = SetTemp + 1;
    Serial.println(SetTemp);
    delay(250);
    }
  if (button.Down == LOW){
+   if(SetTemp == -1){
+     SetTemp = 0;
+   }
    SetTemp = SetTemp - 1;
    Serial.println(SetTemp);
    delay(250);
