@@ -21,9 +21,9 @@ const int Act = 13;
 const int ledPin = 5;
 bool sound;
 
- int freq = 440;
- int ledChannel = 0;
- int resolution = 10;
+int freq = 440;
+int ledChannel = 0;
+int resolution = 10;
 
 int VolSens;
 int LvlSens = 14;
@@ -110,8 +110,6 @@ void setup() {
   pinMode(Act, INPUT_PULLUP);
 
   ledcAttachPin(ledPin, ledChannel);
-
-  Serial.begin(115200);
   buzzer(50,  ledChannel, 3);
 }
 
@@ -205,7 +203,6 @@ void loop() {
     Serial.println(SetTemp);
     delay(250);
     }
-
   do {
     u8g2.setFont(u8g2_font_ncenB08_tr);
     u8g2.drawStr(0,15,"T Set");
