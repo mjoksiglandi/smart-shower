@@ -1,6 +1,22 @@
+/*
+ * An example that demonstrates most capabilities of Espalexa v2.4.0
+ */
+// #ifdef ARDUINO_ARCH_ESP32
+
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include<U8g2lib.h>
+#include <WiFi.h>
+// #else
+// #include <ESP8266WiFi.h>
+// #endif
+//#define ESPALEXA_ASYNC            //uncomment for async operation (can fix empty body issue)
+//#define ESPALEXA_NO_SUBPAGE       //disable /espalexa status page
+//#define ESPALEXA_DEBUG            //activate debug serial logging
+//#define ESPALEXA_MAXDEVICES 15    //set maximum devices add-able to Espalexa
+#include <Espalexa.h>
+#include <credentials.h>
+
 
 #ifdef U8X8_HAVE_HW_SPI
 #include<SPI.h>
@@ -71,7 +87,14 @@ struct Temp {
   int LastTemp;
 };
   Temp T;
-  int SetTemp = 27;
+  int SetTemp;
+
+// Change this!!
+const char* ssid = WIFI_SSID/*"..."*/;
+const char* password = WIFI_PASS /*"wifipassword"*/;
+
+// prototypes
+bool connectWifi();
 
 void buzzer(int delayTime, int led, int intervalo) {
     if (sound == false){
@@ -91,10 +114,42 @@ void buzzer(int delayTime, int led, int intervalo) {
     }
   }
 
-void setup() {
-  Serial.begin (115200);
+void DuchaChanged(EspalexaDevice* dev);
+
+bool wifiConnected = false;
+
+Espalexa espalexa;
+void getTemperature (){
+   T.ActualTemp = sensors.getTempCByIndex(0);
+}
+
+void DuchaChanged(EspalexaDevice* d) {
+  if (d == nullptr) return;
+
+//  uint8_t brightness = d->getValue();
+//  uint8_t percent = d->getPercent();
+  uint8_t degrees = d->getDegrees(); //for heaters, HVAC, ...
+
+  Serial.print("B changed to ");
+  Serial.print(degrees);
+  Serial.println("°C");
+  SetTemp = degrees;
+}
+
+void setup(){
+  Serial.begin(115200);
   sensors.begin();
   u8g2.begin();
+  // Initialise wifi connection
+  wifiConnected = connectWifi();
+  if(!wifiConnected){
+    while (1) {
+      Serial.println("Cannot connect to WiFi. Please check data and reset the ESP.");
+      delay(2500);
+    }
+  }
+  espalexa.addDevice("ducha", DuchaChanged, EspalexaDeviceType::dimmable, 127); //Dimmable device, optional 4th parameter is beginning state (here fully on)
+  espalexa.begin();
 
   ledcSetup(ledChannel, freq, resolution);
 
@@ -113,124 +168,170 @@ void setup() {
   buzzer(50,  ledChannel, 3);
 }
 
-void loop() {
-  sensors.requestTemperatures();
-  T.ActualTemp = sensors.getTempCByIndex(0);
-  button.Up = digitalRead(Up);
-  button.Down = digitalRead(Down);
-  button.Act = digitalRead(Act);
-  Estanque.lvl= digitalRead(LvlSens);
+void loop(){
+ sensors.requestTemperatures();
+ getTemperature ();
+ button.Up = digitalRead(Up);
+ button.Down = digitalRead(Down);
+ button.Act = digitalRead(Act);
+ Estanque.lvl= digitalRead(LvlSens);
+ espalexa.loop();
+ delay(1);
 
-  u8g2.firstPage();
+ u8g2.firstPage();
 
-  Serial.println(rep);
+ Serial.println(rep);
+ Serial.println(SetTemp);
 
-  if (Mode == 0){
-    Status = estado.Inactivo;
-    digitalWrite(SolShow, HIGH);
-    digitalWrite(SolTank, HIGH);
-  }
-  if (button.Act == LOW){
-    Mode = Mode + 1;
-    delay (500);
-    sound = false;
-    buzzer(200,  ledChannel, 0);
-  }
+ if (SetTemp != 0){
+   Mode = 1;
+   //SetTemp = LastTemp;
+ }
 
-  if (T.ActualTemp < SetTemp && Mode != 0 && Estanque.full == false){
-    digitalWrite(SolShow, HIGH);
-    digitalWrite(SolTank, LOW);
-    Status = estado.Esperando;
-    rep = 0;
-  }
-  if (T.ActualTemp >= SetTemp && Mode != 0 && Estanque.full == false){
-    digitalWrite(SolShow, LOW);
-    digitalWrite(SolTank, HIGH);
-    Status = estado.Activo;
-    Serial.println(rep);
-    sound =false;
-    if (rep == 0){
-      buzzer(500,  ledChannel, 1);
-      rep = rep +1;
+ if (Mode == 0){
+   Status = estado.Inactivo;
+   digitalWrite(SolShow, HIGH);
+   digitalWrite(SolTank, HIGH);
+ }
+ if (button.Act == LOW){
+   Mode = Mode + 1;
+   delay (500);
+   sound = false;
+   buzzer(200,  ledChannel, 0);
+ }
+
+ if (T.ActualTemp < SetTemp && Mode != 0 && Estanque.full == false){
+   digitalWrite(SolShow, HIGH);
+   digitalWrite(SolTank, LOW);
+   Status = estado.Esperando;
+   rep = 0;
+ }
+ if (T.ActualTemp >= SetTemp && Mode != 0 && Estanque.full == false){
+   digitalWrite(SolShow, LOW);
+   digitalWrite(SolTank, HIGH);
+   Status = estado.Activo;
+   Serial.println(rep);
+   sound =false;
+   if (rep == 0){
+     buzzer(500,  ledChannel, 1);
+     rep = rep +1;
+   }
+ }
+ if( Mode >= 2 && button.Act == LOW || SetTemp == 0){
+  // LastTemp = SetTemp;
+   Mode = 0;
+   SetTemp= 0;
+   delay (500);
+ }
+ if (Estanque.lvl == LOW){
+   digitalWrite(SolShow, LOW);
+   digitalWrite(SolTank, HIGH);
+   Estanque.full = true;
+   Capacidad = Nivel.LLeno;
+   sound =false;
+
+   }
+ else {
+   Capacidad = Nivel.Vacio;
+   Estanque.full = false;
+   alar = 0;
+ }
+ if(Estanque.full == true){
+   if (alar == 0){
+     buzzer(1000,  ledChannel, 3);
+     alar = alar +1;
+   }
+ }
+ if (Estanque.full == true && Mode == 0){
+   digitalWrite(SolShow, LOW);
+   digitalWrite(SolTank, LOW);
+
+ }
+ if (T.ActualTemp < SetTemp && Mode != 0 && Estanque.full == true){
+   digitalWrite(SolShow, LOW);
+   digitalWrite(SolTank, HIGH);
+   Status = estado.Esperando;
+   rep = 0;
+ }
+ if (T.ActualTemp >= SetTemp && Mode != 0 && Estanque.full == true){
+   digitalWrite(SolShow, LOW);
+   digitalWrite(SolTank, HIGH);
+   Status = estado.Activo;
+   sound =false;
+   if (rep == 0){
+     buzzer(500,  ledChannel, 1);
+     rep = rep +1;
+   }
+ }
+ if (button.Up == LOW){
+   SetTemp = SetTemp + 1;
+   Serial.println(SetTemp);
+   delay(250);
+   }
+ if (button.Down == LOW){
+   SetTemp = SetTemp - 1;
+   Serial.println(SetTemp);
+   delay(250);
+   }
+ do {
+   u8g2.setFont(u8g2_font_ncenB08_tr);
+   u8g2.drawStr(0,15,"T Set");
+   u8g2.setCursor(30, 15);
+   u8g2.print(SetTemp);
+   u8g2.drawStr(48,15,"C");
+   u8g2.setFont(u8g2_font_unifont_t_symbols);
+   u8g2.drawGlyph(40, 15, 0x00b0);
+   ////////////////////////////////
+   u8g2.setFont(u8g2_font_ncenB08_tr);
+   u8g2.drawStr(64,15,"T Act");
+   u8g2.setCursor(94, 15);
+   u8g2.print(T.ActualTemp);
+   u8g2.drawStr(113, 15,"C");
+   u8g2.setFont(u8g2_font_unifont_t_symbols);
+   u8g2.drawGlyph(104, 15, 0x00b0);
+   ///////////////////////////////
+   int largo = ((Status.length()+(Status.length()*6)/2));
+   int center = (63 - largo);
+   u8g2.setFont(u8g2_font_ncenB10_tr);
+   u8g2.setCursor(center, 35);
+   u8g2.print(Status);
+   ////////////////////////////////
+   int largo1 = ((Capacidad.length()+(Capacidad.length()*6)/2));
+   int center1 = (63 - largo1);
+   u8g2.setFont(u8g2_font_ncenB10_tr);
+   u8g2.setCursor(center1, 55);
+   u8g2.print(Capacidad);
+ }
+ while ( u8g2.nextPage() );
+}
+bool connectWifi(){
+  bool state = true;
+  int i = 0;
+
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+  Serial.println("");
+  Serial.println("Connecting to WiFi");
+
+  // Wait for connection
+  Serial.print("Connecting...");
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+    if (i > 20){
+      state = false; break;
     }
+    i++;
   }
-  if( Mode >= 2 && button.Act == LOW){
-    Mode = 0;
-    delay (500);
+  Serial.println("");
+  if (state){
+    Serial.print("Connected to ");
+    Serial.println(ssid);
+    Serial.print("IP address: ");
+    Serial.println(WiFi.localIP());
   }
-  if (Estanque.lvl == LOW){
-    digitalWrite(SolShow, LOW);
-    digitalWrite(SolTank, HIGH);
-    Estanque.full = true;
-    Capacidad = Nivel.LLeno;
-    sound =false;
-
-    }
   else {
-    Capacidad = Nivel.Vacio;
-    Estanque.full = false;
-    alar = 0;
+    Serial.println("Connection failed.");
   }
-  if(Estanque.full == true){
-    if (alar == 0){
-      buzzer(1000,  ledChannel, 3);
-      alar = alar +1;
-    }
-  }
-  if (T.ActualTemp < SetTemp && Mode != 0 && Estanque.full == true){
-    digitalWrite(SolShow, LOW);
-    digitalWrite(SolTank, HIGH);
-    Status = estado.Esperando;
-    rep = 0;
-  }
-  if (T.ActualTemp >= SetTemp && Mode != 0 && Estanque.full == true){
-    digitalWrite(SolShow, LOW);
-    digitalWrite(SolTank, HIGH);
-    Status = estado.Activo;
-    sound =false;
-    if (rep == 0){
-      buzzer(500,  ledChannel, 1);
-      rep = rep +1;
-    }
-  }
-  if (button.Up == LOW){
-    SetTemp = SetTemp + 1;
-    Serial.println(SetTemp);
-    delay(250);
-    }
-  if (button.Down == LOW){
-    SetTemp = SetTemp - 1;
-    Serial.println(SetTemp);
-    delay(250);
-    }
-  do {
-    u8g2.setFont(u8g2_font_ncenB08_tr);
-    u8g2.drawStr(0,15,"T Set");
-    u8g2.setCursor(30, 15);
-    u8g2.print(SetTemp);
-    u8g2.drawStr(48,15,"C");
-    u8g2.setFont(u8g2_font_unifont_t_symbols);
-    u8g2.drawGlyph(40, 15, 0x00b0);
-    ////////////////////////////////
-    u8g2.setFont(u8g2_font_ncenB08_tr);
-    u8g2.drawStr(64,15,"T Act");
-    u8g2.setCursor(94, 15);
-    u8g2.print(T.ActualTemp);
-    u8g2.drawStr(113, 15,"C");
-    u8g2.setFont(u8g2_font_unifont_t_symbols);
-    u8g2.drawGlyph(104, 15, 0x00b0);
-    ///////////////////////////////
-    int largo = ((Status.length()+(Status.length()*6)/2));
-    int center = (63 - largo);
-    u8g2.setFont(u8g2_font_ncenB10_tr);
-    u8g2.setCursor(center, 35);
-    u8g2.print(Status);
-    ////////////////////////////////
-    int largo1 = ((Capacidad.length()+(Capacidad.length()*6)/2));
-    int center1 = (63 - largo1);
-    u8g2.setFont(u8g2_font_ncenB10_tr);
-    u8g2.setCursor(center1, 55);
-    u8g2.print(Capacidad);
-  }
-  while ( u8g2.nextPage() );
+  return state;
 }
