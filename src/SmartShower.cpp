@@ -5,7 +5,10 @@
 
 #include <Espalexa.h>
 #include <credentials.h>
+#include <Tone32.h>
 
+#define BUZZER_PIN 5
+#define BUZZER_CHANNEL 0
 
 #ifdef U8X8_HAVE_HW_SPI
 #include<SPI.h>
@@ -26,9 +29,9 @@ const int Act = 13;
 const int ledPin = 5;
 bool sound;
 
-int freq = 440;
-int ledChannel = 0;
-int resolution = 10;
+// int freq = 440;
+// int ledChannel = 0;
+// int resolution = 10;
 
 int VolSens;
 int LvlSens = 14;
@@ -41,6 +44,7 @@ int Mode = 0;
 
 int rep = 0;
 int alar = 0;
+int a = 0;
 
 struct volumen {
   String LLeno = "lleno";
@@ -123,6 +127,40 @@ void DuchaChanged(EspalexaDevice* d) {
   SetTemp = degrees;
 }
 
+void inicio(){
+  tone(BUZZER_PIN, NOTE_FS4, 250, BUZZER_CHANNEL);
+  noTone(BUZZER_PIN, BUZZER_CHANNEL);
+  tone(BUZZER_PIN, NOTE_A4, 125, BUZZER_CHANNEL);
+  noTone(BUZZER_PIN, BUZZER_CHANNEL);
+  tone(BUZZER_PIN, NOTE_B4, 125, BUZZER_CHANNEL);
+  noTone(BUZZER_PIN, BUZZER_CHANNEL);
+  tone(BUZZER_PIN, NOTE_CS5, 250, BUZZER_CHANNEL);
+  noTone(BUZZER_PIN, BUZZER_CHANNEL);
+  tone(BUZZER_PIN, NOTE_A4, 64, BUZZER_CHANNEL);
+  noTone(BUZZER_PIN, BUZZER_CHANNEL);
+  tone(BUZZER_PIN, NOTE_E5, 1500, BUZZER_CHANNEL);
+  noTone(BUZZER_PIN, BUZZER_CHANNEL);
+}
+void final(){
+  tone(BUZZER_PIN, NOTE_CS5, 250, BUZZER_CHANNEL);
+  noTone(BUZZER_PIN, BUZZER_CHANNEL);
+  tone(BUZZER_PIN, NOTE_E5, 125, BUZZER_CHANNEL);
+  noTone(BUZZER_PIN, BUZZER_CHANNEL);
+  tone(BUZZER_PIN, NOTE_B4, 125, BUZZER_CHANNEL);
+  noTone(BUZZER_PIN, BUZZER_CHANNEL);
+  tone(BUZZER_PIN, NOTE_CS5, 125, BUZZER_CHANNEL);
+  noTone(BUZZER_PIN, BUZZER_CHANNEL);
+  tone(BUZZER_PIN, NOTE_A4, 125, BUZZER_CHANNEL);
+  noTone(BUZZER_PIN, BUZZER_CHANNEL);
+  tone(BUZZER_PIN, NOTE_FS4, 1500, BUZZER_CHANNEL);
+  noTone(BUZZER_PIN, BUZZER_CHANNEL);
+}
+void error(){
+  tone(BUZZER_PIN, NOTE_B3, 2500, BUZZER_CHANNEL);
+  noTone(BUZZER_PIN, BUZZER_CHANNEL);
+  delay(10000);
+}
+
 void setup(){
   Serial.begin(115200);
   sensors.begin();
@@ -131,7 +169,7 @@ void setup(){
   espalexa.addDevice("ducha", DuchaChanged, EspalexaDeviceType::dimmable, 127);
   espalexa.begin();
 
-  ledcSetup(ledChannel, freq, resolution);
+  //ledcSetup(ledChannel, freq, resolution);
 
   pinMode(VolSens, INPUT);
   pinMode(LvlSens, INPUT_PULLUP);
@@ -144,8 +182,8 @@ void setup(){
   pinMode(Down, INPUT_PULLUP);
   pinMode(Act, INPUT_PULLUP);
 
-  ledcAttachPin(ledPin, ledChannel);
-  buzzer(50,  ledChannel, 3);
+  // ledcAttachPin(ledPin, ledChannel);
+  // buzzer(50,  ledChannel, 3);
 }
 
 void loop(){
@@ -160,13 +198,9 @@ void loop(){
 
  u8g2.firstPage();
 
- // Serial.println(rep);
- // Serial.println(SetTemp);
-
  if (SetTemp != 0){
    Mode = 1;
  }
-
  if (Mode == 0){
    Status = estado.Inactivo;
    digitalWrite(SolShow, HIGH);
@@ -176,7 +210,7 @@ void loop(){
    Mode = Mode + 1;
    delay (500);
    sound = false;
-   buzzer(200,  ledChannel, 0);
+
  }
 
  if (T.ActualTemp < SetTemp && Mode != 0 && Estanque.full == false){
@@ -189,16 +223,21 @@ void loop(){
    digitalWrite(SolShow, LOW);
    digitalWrite(SolTank, HIGH);
    Status = estado.Activo;
-   // Serial.println(rep);
+
    sound =false;
    if (rep == 0){
-     buzzer(500,  ledChannel, 1);
+     inicio();
      rep = rep +1;
    }
  }
  if( Mode >= 2 && button.Act == LOW || SetTemp == 0){
    Mode = 0;
    SetTemp= 0;
+
+   if (a==0){
+     final();
+     a = a+1;
+   }
    delay (500);
  }
  if (Estanque.lvl == LOW){
@@ -216,7 +255,7 @@ void loop(){
  }
  if(Estanque.full == true){
    if (alar == 0){
-     buzzer(1000,  ledChannel, 3);
+     error();
      alar = alar +1;
    }
  }
@@ -237,7 +276,7 @@ void loop(){
    Status = estado.Activo;
    sound =false;
    if (rep == 0){
-     buzzer(500,  ledChannel, 1);
+    inicio();
      rep = rep +1;
    }
  }
