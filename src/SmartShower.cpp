@@ -29,10 +29,6 @@ const int Act = 13;
 const int ledPin = 5;
 bool sound;
 
-// int freq = 440;
-// int ledChannel = 0;
-// int resolution = 10;
-
 int VolSens;
 int LvlSens = 14;
 
@@ -169,8 +165,6 @@ void setup(){
   espalexa.addDevice("ducha", DuchaChanged, EspalexaDeviceType::dimmable, 127);
   espalexa.begin();
 
-  //ledcSetup(ledChannel, freq, resolution);
-
   pinMode(VolSens, INPUT);
   pinMode(LvlSens, INPUT_PULLUP);
 
@@ -181,9 +175,6 @@ void setup(){
   pinMode(Up, INPUT_PULLUP);
   pinMode(Down, INPUT_PULLUP);
   pinMode(Act, INPUT_PULLUP);
-
-  // ledcAttachPin(ledPin, ledChannel);
-  // buzzer(50,  ledChannel, 3);
 }
 
 void loop(){
@@ -210,7 +201,6 @@ void loop(){
    Mode = Mode + 1;
    delay (500);
    sound = false;
-
  }
 
  if (T.ActualTemp < SetTemp && Mode != 0 && Estanque.full == false){
