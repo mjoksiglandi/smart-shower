@@ -17,6 +17,7 @@
 #include<Wire.h>
 #endif
 
+#define ESPALEXA_MAXDEVICES 1
 U8G2_SH1106_128X64_NONAME_1_HW_I2C u8g2(U8G2_R0,22, 21,  U8X8_PIN_NONE);
 
 const int oneWireBus = 4;
@@ -152,7 +153,7 @@ void final(){
   noTone(BUZZER_PIN, BUZZER_CHANNEL);
 }
 void error(){
-  tone(BUZZER_PIN, NOTE_B3, 2500, BUZZER_CHANNEL);
+  tone(BUZZER_PIN, NOTE_B3, 3000, BUZZER_CHANNEL);
   noTone(BUZZER_PIN, BUZZER_CHANNEL);
   delay(10000);
 }
@@ -191,6 +192,7 @@ void loop(){
 
  if (SetTemp != 0){
    Mode = 1;
+   a = 0;
  }
  if (Mode == 0){
    Status = estado.Inactivo;
@@ -213,7 +215,6 @@ void loop(){
    digitalWrite(SolShow, LOW);
    digitalWrite(SolTank, HIGH);
    Status = estado.Activo;
-
    sound =false;
    if (rep == 0){
      inicio();
