@@ -1,8 +1,10 @@
+#include <Arduino.h>
+
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include<U8g2lib.h>
 #include <WiFi.h>
-
+#define ESPALEXA_MAXDEVICES 1
 #include <Espalexa.h>
 #include <credentials.h>
 #include <Tone32.h>
@@ -17,7 +19,7 @@
 #include<Wire.h>
 #endif
 
-#define ESPALEXA_MAXDEVICES 1
+
 U8G2_SH1106_128X64_NONAME_1_HW_I2C u8g2(U8G2_R0,22, 21,  U8X8_PIN_NONE);
 
 const int oneWireBus = 4;
@@ -113,14 +115,7 @@ void getTemperature (){
 
 void DuchaChanged(EspalexaDevice* d) {
   if (d == nullptr) return;
-
-//  uint8_t brightness = d->getValue();
-//  uint8_t percent = d->getPercent();
   uint8_t degrees = d->getDegrees(); //for heaters, HVAC, ...
-
-  // Serial.print("B changed to ");
-  // Serial.print(degrees);
-  // Serial.println("°C");
   SetTemp = degrees;
 }
 
@@ -190,7 +185,7 @@ void loop(){
 
  u8g2.firstPage();
 
- if (SetTemp != 0){
+ if (SetTemp != 20){
    Mode = 1;
    a = 0;
  }
@@ -221,9 +216,9 @@ void loop(){
      rep = rep +1;
    }
  }
- if( Mode >= 2 && button.Act == LOW || SetTemp == 0){
+ if( Mode >= 2 && button.Act == LOW || SetTemp == 20){
    Mode = 0;
-   SetTemp= 0;
+   SetTemp= 20;
 
    if (a==0){
      final();
@@ -272,20 +267,25 @@ void loop(){
    }
  }
  if (button.Up == LOW){
-   if(SetTemp == 0){
+   if(SetTemp == 20){
      SetTemp = 25;
    }
    SetTemp = SetTemp + 1;
+   tone(BUZZER_PIN, NOTE_A4, 125, BUZZER_CHANNEL);
+   noTone(BUZZER_PIN, BUZZER_CHANNEL);
    // Serial.println(SetTemp);
    delay(250);
    }
  if (button.Down == LOW){
-   if(SetTemp == -1){
-     SetTemp = 0;
-   }
+
    SetTemp = SetTemp - 1;
+   tone(BUZZER_PIN, NOTE_E4, 125, BUZZER_CHANNEL);
+   noTone(BUZZER_PIN, BUZZER_CHANNEL);
    // Serial.println(SetTemp);
    delay(250);
+   }
+   if(SetTemp <= 21){
+     SetTemp = 20;
    }
  do {
    u8g2.setFont(u8g2_font_ncenB08_tr);
